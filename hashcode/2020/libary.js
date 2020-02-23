@@ -1,5 +1,9 @@
 class Library {
 
+	static get sortingFields() {
+		return [ 'booksPerDay', 'registerTime', 'booksScore', 'scorePerDay', 'availableBooks' ];
+	}
+
 	constructor( id, registerTime = 0, booksPerDay = 0, available = [] ) {
 		this.id = id;
 		this.registerTime = registerTime;
@@ -58,7 +62,7 @@ class Library {
 
 	reset() {
 		this.sent = [];
-		this.available = this.backup.available;
+		this.available = Array.from( this.backup.available );
 		this.registerTime = this.backup.registerTime;
 	}
 }

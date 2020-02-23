@@ -10,8 +10,8 @@ const BEST_SCORES = {
 	'b_read_on': 5822900,
 	'c_incunabula': 5467966,
 	'd_tough_choices': 4667585,
-	'e_so_many_books': 2697524,
-	'f_libraries_of_the_world': 2594307
+	'e_so_many_books': 3117975,
+	'f_libraries_of_the_world': 2806707
 };
 
 const Library = require( './libary' ),
@@ -54,50 +54,63 @@ const read = ( fileName = '' ) => {
 	} )
 };
 
-const determineLibraryOrder = ( field = 'registerTime', order = 'ASC' ) => {
+const determineLibraryOrder = ( field = 'registerTime', order = 'ASC', secondField = 'scorePerDay', secondOrder = 'ASC' ) => {
+	return Array.from( libraries )
+	            .sort( ( library1, library2 ) => {
 
-	return libraries
-		.sort( ( lib1, lib2 ) => {
-			return order === 'ASC' ? lib1[ field ] - lib2[ field ] : lib2[ field ] - lib1[ field ];
-		} )
-		.map( l => l.id );
+		            if ( library1[ field ] === library2[ field ] ) {
+			            return secondOrder === 'ASC' ? library1[ secondField ] - library2[ secondField ] : library2[ secondField ] - library1[ secondField ]
+		            }
+
+		            return order === 'ASC' ? library1[ field ] - library2[ field ] : library2[ field ] - library1[ field ];
+	            } )
+	            .map( l => l.id );
 };
 
 read( INPUT ).then( success => {
 
 	let solutions = [];
 
-	[ 'booksPerDay', 'registerTime', 'booksScore', 'scorePerDay', 'availableBooks' ].forEach( field => {
-		[ 'ASC', 'DESC' ].forEach( order => {
-			const solutionLabel = `Order by ${field} ${order}`;
+	Library.sortingFields.forEach( field => {
+		Library.sortingFields.forEach( secondField => {
+			if ( field !== secondField ) {
+				[ 'ASC', 'DESC' ].forEach( order => {
+					[ 'ASC', 'DESC' ].forEach( secondOrder => {
+						const solutionLabel = `Order by ${field}:${order} AND ${secondField}:${secondOrder}`;
 
-			console.time( solutionLabel );
+						console.time( solutionLabel );
 
-			solutions.push( {
-				field: field,
-				order: order,
-				...doSolution( determineLibraryOrder( field, order ), DAYS )
-			} );
+						solutions.push( {
+							field: field,
+							order: order,
+							secondField: secondField,
+							secondOrder: secondOrder,
+							...doSolution( determineLibraryOrder( field, order, secondField, secondOrder ), DAYS )
+						} );
 
-			libraries.forEach( library => library.reset() );
+						libraries.forEach( library => library.reset() );
 
-			console.timeEnd( solutionLabel );
+						console.timeEnd( solutionLabel );
+					} );
+				} );
+			}
 		} );
 	} );
 
 	solutions = solutions.sort( ( s1, s2 ) => s2.score - s1.score );
 
-	solutions.forEach( solution => console.log( `${solution.score} --- ${solution.field} --- ${solution.order}` ) );
+	solutions.forEach( solution => console.log( `${solution.score} --- ${solution.field} --- ${solution.order} --- ${solution.secondField} --- ${solution.secondOrder}` ) );
 
 	const bestSolution = solutions.shift();
 
 	if ( bestSolution.score > BEST_SCORES[ INPUT ] ) {
 		console.log( `gg.wp ${bestSolution.score}` );
-		doSolution( determineLibraryOrder( bestSolution.field, bestSolution.order ), DAYS );
-		writeSolution( INPUT, bestSolution.librariesSendingOrder, libraries )
 	} else {
 		console.log( `None of the solutions was better than the current high score!` );
 	}
+
+	doSolution( determineLibraryOrder( bestSolution.field, bestSolution.order, bestSolution.secondField, bestSolution.secondOrder ), DAYS );
+	writeSolution( INPUT, bestSolution.librariesSendingOrder, libraries )
 } );
 
 const doSolution = ( order, days ) => {
