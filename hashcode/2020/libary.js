@@ -1,14 +1,17 @@
 class Library {
 
-	constructor( id, stall = 0, booksPerDay = 0, available = [] ) {
-
+	constructor( id, registerTime = 0, booksPerDay = 0, available = [] ) {
 		this.id = id;
-		this.stall = stall;
+		this.registerTime = registerTime;
 		this.booksPerDay = booksPerDay;
 		this.available = available;
 		this.wantToSend = [];
 
 		this.sent = [];
+
+		this.backup = {
+			registerTime: registerTime
+		};
 	}
 
 	setBooks( books = [], booksScore = [] ) {
@@ -23,20 +26,22 @@ class Library {
 		this.availableBooks = this.available.length;
 
 		this.scorePerDay = this.booksScore / this.booksPerDay;
+
+		this.backup.available = this.available;
 	}
 
 	getBooksToSend( ignore = [], allBooks = [] ) {
-		let books = [];
+		let booksToSend = [];
 
 		this.available.forEach( bookId => {
-			if ( ! ignore.includes( bookId ) && books.length < this.booksPerDay && allBooks[ bookId ] >= 0 ) {
-				books.push( bookId );
+			if ( booksToSend.length < this.booksPerDay && allBooks[ bookId ] && ! ignore.includes( bookId ) ) {
+				booksToSend.push( bookId );
 			}
 		} );
 
-		this.wantToSend = books;
+		this.wantToSend = booksToSend;
 
-		return books;
+		return booksToSend;
 	}
 
 	sendBooks( alsoSend = [] ) {
@@ -49,6 +54,12 @@ class Library {
 
 	hasBookToSend() {
 		return this.available.length > 0;
+	}
+
+	reset() {
+		this.sent = [];
+		this.available = this.backup.available;
+		this.registerTime = this.backup.registerTime;
 	}
 }
 

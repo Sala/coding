@@ -1,23 +1,22 @@
-module.exports = ( fileName, order, allLibraries ) => {
+module.exports = ( fileName, librariesOrder, allLibraries ) => {
 
 	const fs = require( 'fs' );
-	let sols = 0;
+	let nrOfSolutions = 0,
+		solution = '';
 
-	let solution = '';
-
-	order.forEach( libraryId => {
+	librariesOrder.forEach( libraryId => {
 		const library = allLibraries.find( lib => lib.id === libraryId );
 		if ( library.sent.length ) {
 			solution += libraryId + ' ' + library.sent.length + "\n";
 			solution += library.sent.join( ' ' ) + "\n";
 
-			sols ++;
+			nrOfSolutions ++;
 		}
 	} );
 
-	solution = sols + "\n" + solution;
+	solution = nrOfSolutions + "\n" + solution;
 
-	fs.writeFile( `./${fileName}.out`, solution, function ( err ) {
+	fs.writeFile( `./out/${fileName}.out`, solution, function ( err ) {
 		if ( err ) {
 			return console.log( err );
 		} else {

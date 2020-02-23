@@ -2,7 +2,7 @@
 //const INPUT = 'b_read_on';
 //const INPUT = 'c_incunabula';
 //const INPUT = 'd_tough_choices';
-//const INPUT ='e_so_many_books';
+//const INPUT = 'e_so_many_books';
 const INPUT = 'f_libraries_of_the_world';
 
 const BEST_SCORES = {
@@ -11,14 +11,14 @@ const BEST_SCORES = {
 	'c_incunabula': 5467966,
 	'd_tough_choices': 4667585,
 	'e_so_many_books': 2697524,
-	'f_libraries_of_the_world': 2466902
+	'f_libraries_of_the_world': 2594307
 };
 
 const Library = require( './libary' ),
-	prepareSolution = require( './out' );
+	writeSolution = require( './write' );
 
 let NR_BOOKS, NR_LIBRARIES, DAYS;
-let books = [];
+let booksScore = [];
 let libraries = [];
 
 const read = ( fileName = '' ) => {
@@ -26,7 +26,7 @@ const read = ( fileName = '' ) => {
 		const fs = require( 'fs' ),
 			parseLine = line => line.split( ' ' ).map( nr => parseInt( nr ) );
 
-		fs.readFile( fileName, 'utf8', ( err, contents ) => {
+		fs.readFile( `./in/${fileName}.txt`, 'utf8', ( err, contents ) => {
 			const lines = contents.split( /\r?\n/ ),
 				firstData = parseLine( lines[ 0 ] );
 
@@ -34,7 +34,7 @@ const read = ( fileName = '' ) => {
 			NR_LIBRARIES = firstData[ 1 ];
 			DAYS = firstData[ 2 ];
 
-			books = parseLine( lines[ 1 ] );
+			booksScore = parseLine( lines[ 1 ] );
 
 			let libIndex = 0;
 
@@ -42,7 +42,7 @@ const read = ( fileName = '' ) => {
 				const data = parseLine( lines[ ( libIndex + 1 ) * 2 ] ),
 					currentLib = new Library( libIndex, data[ 1 ], data[ 2 ] );
 
-				currentLib.setBooks( parseLine( lines[ ( libIndex + 1 ) * 2 + 1 ] ), books );
+				currentLib.setBooks( parseLine( lines[ ( libIndex + 1 ) * 2 + 1 ] ), booksScore );
 
 				libraries.push( currentLib );
 
@@ -51,42 +51,71 @@ const read = ( fileName = '' ) => {
 
 			resolve( 'Finished Reading' );
 		} );
-
 	} )
 };
 
-let libraryInSignUp = false,
-	librariesThatSend = [],
-	/* the ones that have sent something */
-	librariesSendingBooks = [];
-
-const determineLibraryOrder = () => {
-
-	const field = 'availableBooks',
-		order = 'D';
+const determineLibraryOrder = ( field = 'registerTime', order = 'ASC' ) => {
 
 	return libraries
 		.sort( ( lib1, lib2 ) => {
-			return order === 'A' ? lib1[ field ] - lib2[ field ] : lib2[ field ] - lib1[ field ];
+			return order === 'ASC' ? lib1[ field ] - lib2[ field ] : lib2[ field ] - lib1[ field ];
 		} )
 		.map( l => l.id );
 };
 
-read( `${INPUT}.txt` ).then( success => {
+read( INPUT ).then( success => {
 
-	const order = determineLibraryOrder();
+	let solutions = [];
 
-	console.time( 'Solution time' );
+	[ 'booksPerDay', 'registerTime', 'booksScore', 'scorePerDay', 'availableBooks' ].forEach( field => {
+		[ 'ASC', 'DESC' ].forEach( order => {
+			const solutionLabel = `Order by ${field} ${order}`;
 
-	while ( DAYS -- ) {
-		if ( libraryInSignUp === false && libraries.length ) {
+			console.time( solutionLabel );
+
+			solutions.push( {
+				field: field,
+				order: order,
+				...doSolution( determineLibraryOrder( field, order ), DAYS )
+			} );
+
+			libraries.forEach( library => library.reset() );
+
+			console.timeEnd( solutionLabel );
+		} );
+	} );
+
+	solutions = solutions.sort( ( s1, s2 ) => s2.score - s1.score );
+
+	solutions.forEach( solution => console.log( `${solution.score} --- ${solution.field} --- ${solution.order}` ) );
+
+	const bestSolution = solutions.shift();
+
+	if ( bestSolution.score > BEST_SCORES[ INPUT ] ) {
+		console.log( `gg.wp ${bestSolution.score}` );
+		doSolution( determineLibraryOrder( bestSolution.field, bestSolution.order ), DAYS );
+		writeSolution( INPUT, bestSolution.librariesSendingOrder, libraries )
+	} else {
+		console.log( `None of the solutions was better than the current high score!` );
+	}
+} );
+
+const doSolution = ( order, days ) => {
+	let librariesSendingOrder = [],
+		/** @type {Library} */
+		libraryInSignUp = null,
+		librariesThatSend = [],
+		bookAvailability = Array( NR_BOOKS ).fill( true );
+
+	while ( days -- ) {
+		if ( libraryInSignUp === null && libraries.length ) {
 			const libId = order.shift();
 			libraryInSignUp = libraries.find( lib => lib.id === libId ); //we can do better
 		}
 		let booksToSend = [];
 
 		librariesThatSend.forEach( library => {
-			booksToSend = booksToSend.concat( library.getBooksToSend( booksToSend, books ) );
+			booksToSend = booksToSend.concat( library.getBooksToSend( booksToSend, bookAvailability ) );
 		} );
 
 		librariesThatSend.forEach( library => {
@@ -98,46 +127,39 @@ read( `${INPUT}.txt` ).then( success => {
 		} );
 
 		booksToSend.forEach( bookId => {
-			books[ bookId ] = books[ bookId ] * ( - 1 );
+			bookAvailability[ bookId ] = false;
 		} );
 
 		if ( libraryInSignUp ) {
 			/* another sign up day has passed */
-			libraryInSignUp.stall --;
+			libraryInSignUp.registerTime --;
 
 			/* if we finish signing */
-			if ( libraryInSignUp.stall === 0 ) {
+			if ( libraryInSignUp.registerTime === 0 ) {
 				/* next day, this library will start sending */
 				librariesThatSend.push( libraryInSignUp );
 				/* we need for the solution to know who sent and in what order */
-				librariesSendingBooks.push( libraryInSignUp.id );
+				librariesSendingOrder.push( libraryInSignUp.id );
 				/* and we need another library to start signing */
-				libraryInSignUp = false;
-
+				libraryInSignUp = null;
 			}
 		}
 	}
 
-	const score = solutionScore();
+	return {
+		score: solutionScore( librariesSendingOrder ),
+		librariesSendingOrder: librariesSendingOrder
+	};
+};
 
-	if ( score > BEST_SCORES[ INPUT ] ) {
-		console.log( `gg.wp ${score}` );
-		prepareSolution( INPUT, librariesSendingBooks, libraries )
-	} else {
-		console.log( `CLIK DREAPTA DELET DATEN MORTI MATI NU STAM LA DISCUTI ${score - BEST_SCORES[ INPUT ]}` );
-	}
-
-	console.timeEnd('Solution time')
-} );
-
-const solutionScore = () => {
+const solutionScore = ( librariesOrder ) => {
 	let score = 0;
 
-	librariesSendingBooks.forEach( libraryId => {
+	librariesOrder.forEach( libraryId => {
 		const lib = libraries.find( l => l.id === libraryId );
 
 		lib.sent.forEach( bookId => {
-			score += - 1 * books[ bookId ];
+			score += booksScore[ bookId ];
 		} );
 	} );
 
