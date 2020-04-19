@@ -1,0 +1,21 @@
+{
+  "name": "Remove Facebook Ads",
+  "version": "1.0",
+  "description": "This extension will remove facebook ads while you scroll down.",
+  "manifest_version": 2,
+  "browser_action": {
+    "default_title": "Remove Facebook Ads",
+    "default_icon": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.facebook.com/*"
+      ],
+      "js": [
+        "script.js"
+      ]
+    }
+  ]
+}
+
