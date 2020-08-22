@@ -110,6 +110,7 @@ class Helpers {
 ( () => {
 
 	const removeAds = () => {
+		/* classic facebook */
 		document.querySelectorAll( '[data-testid="testid--story-label"]' ).forEach( header => {
 			header.childNodes.forEach( headerChildNode => {
 				if ( headerChildNode.nodeType === Node.ELEMENT_NODE && Helpers.isSponsoredNode( headerChildNode ) ) {
@@ -127,6 +128,9 @@ class Helpers {
 				}
 			} );
 		} );
+
+		/* new facebook */
+		document.querySelectorAll( '[aria-label="Sponsored"]' ).forEach( element => element.closest( '[data-pagelet]' ).remove() )
 	};
 
 	window.addEventListener( 'scroll', Helpers.throttle( removeAds, 4200 ) );
